@@ -23,12 +23,29 @@ export default function SettingsScreen() {
 
   const set = (patch: Partial<Settings>) => update((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
 
-  const saveWeight = () => {
-    const w = Number(weight);
-    if (!(w > 0)) return setWeight(settings.bodyWeightLbs ? String(settings.bodyWeightLbs) : '');
-    const g = proteinGoalFor(w);
-    setProtein(String(g));
-    set({ bodyWeightLbs: w, proteinGoal: g });
+  // Each field saves as soon as it holds a valid value (blur/end-editing events don't fire reliably on web).
+  const changeGoal = (t: string) => {
+    setGoal(t);
+    if (t.trim()) set({ customTaskName: t.trim() });
+  };
+  const changeMinutes = (t: string) => {
+    setMinutes(t);
+    const m = Math.round(Number(t));
+    if (m >= 15 && m <= 1440) set({ customTaskMinutes: m });
+  };
+  const changeWeight = (t: string) => {
+    setWeight(t);
+    const w = Number(t);
+    if (w >= 50 && w <= 700) {
+      const g = proteinGoalFor(w);
+      setProtein(String(g));
+      set({ bodyWeightLbs: w, proteinGoal: g });
+    }
+  };
+  const changeProtein = (t: string) => {
+    setProtein(t);
+    const g = Math.round(Number(t));
+    if (g >= 20 && g <= 500) set({ proteinGoal: g });
   };
 
   const toggleReminders = async (on: boolean) => {
@@ -51,8 +68,8 @@ export default function SettingsScreen() {
         <TextInput
           style={styles.input}
           value={goal}
-          onChangeText={setGoal}
-          onEndEditing={() => set({ customTaskName: goal.trim() || 'Personal goal' })}
+          onChangeText={changeGoal}
+          onBlur={() => setGoal(settings.customTaskName)}
           placeholder="What do you want to work on?"
           placeholderTextColor={colors.muted}
         />
@@ -60,37 +77,40 @@ export default function SettingsScreen() {
           <TextInput
             style={[styles.input, styles.small]}
             value={minutes}
-            onChangeText={setMinutes}
+            onChangeText={changeMinutes}
+            onBlur={() => setMinutes(String(settings.customTaskMinutes))}
             keyboardType="number-pad"
-            onEndEditing={() => {
-              const m = Math.max(15, Math.round(Number(minutes)) || settings.customTaskMinutes);
-              setMinutes(String(m));
-              set({ customTaskMinutes: m });
-            }}
           />
         </Row>
-        <Text style={styles.hint}>Shows on your checklist as "At least {formatMinutes(settings.customTaskMinutes)}".</Text>
+        <Text style={styles.hint}>Shows on your checklist as "At least {formatMinutes(settings.customTaskMinutes)}" (15 minutes or more).</Text>
       </Card>
 
       <SectionLabel>Nutrition</SectionLabel>
       <Card style={{ gap: 10 }}>
         <Row label="Body weight (lbs)">
-          <TextInput style={[styles.input, styles.small]} value={weight} onChangeText={setWeight} keyboardType="number-pad" onEndEditing={saveWeight} placeholder="—" placeholderTextColor={colors.muted} />
+          <TextInput
+            style={[styles.input, styles.small]}
+            value={weight}
+            onChangeText={changeWeight}
+            onBlur={() => setWeight(settings.bodyWeightLbs ? String(settings.bodyWeightLbs) : '')}
+            keyboardType="decimal-pad"
+            placeholder="—"
+            placeholderTextColor={colors.muted}
+          />
         </Row>
         <Row label="Protein goal (g/day)">
           <TextInput
             style={[styles.input, styles.small]}
             value={protein}
-            onChangeText={setProtein}
+            onChangeText={changeProtein}
+            onBlur={() => setProtein(String(settings.proteinGoal))}
             keyboardType="number-pad"
-            onEndEditing={() => {
-              const g = Math.round(Number(protein));
-              if (g > 0) set({ proteinGoal: g });
-              else setProtein(String(settings.proteinGoal));
-            }}
           />
         </Row>
-        <Text style={styles.hint}>Entering your weight sets the goal to 1 g per lb. You can change it yourself.</Text>
+        <Text style={styles.hint}>
+          Changing your weight sets the goal to 1 g per lb. Change the protein goal after that to use your own number. Changes save
+          as you type.
+        </Text>
       </Card>
 
       <SectionLabel>Reminders</SectionLabel>

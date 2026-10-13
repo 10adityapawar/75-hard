@@ -1,6 +1,30 @@
 export type TaskId = 'wake' | 'workout' | 'outdoor' | 'water' | 'photo' | 'custom' | 'diet';
 
-export type FoodCategory = 'Meat & Poultry' | 'Seafood' | 'Eggs & Dairy' | 'Shakes & Snacks' | 'Grains' | 'Fruit';
+export type FoodCategory =
+  | 'Meat & Poultry'
+  | 'Seafood'
+  | 'Eggs & Dairy'
+  | 'Plant Protein'
+  | 'Shakes & Snacks'
+  | 'Nuts & Seeds'
+  | 'Grains'
+  | 'Vegetables'
+  | 'Fruit';
+
+export type FoodTag =
+  | 'tree-nuts'
+  | 'peanuts'
+  | 'legumes'
+  | 'soy'
+  | 'dairy'
+  | 'eggs'
+  | 'fish'
+  | 'shellfish'
+  | 'gluten'
+  | 'meat'
+  | 'red-meat'
+  | 'pork'
+  | 'vegetables';
 
 export type Food = {
   id: string;
@@ -9,6 +33,7 @@ export type Food = {
   protein: number; // grams per serving
   calories: number; // per serving
   category: FoodCategory;
+  tags: FoodTag[]; // used by diet restrictions
   note?: string;
 };
 
@@ -38,6 +63,8 @@ export type Settings = {
   bodyWeightLbs: number | null;
   proteinGoal: number; // grams per day
   remindersEnabled: boolean;
+  excludedTags?: FoodTag[]; // restrictions the person removed from their diet
+  hiddenFoods?: string[]; // individual foods the person removed
   calendarPromptDismissed?: boolean; // web: hid the "add reminders to Google Calendar" card
 };
 

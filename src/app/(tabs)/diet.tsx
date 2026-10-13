@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { DietRestrictions } from '../../components/DietRestrictions';
 import { FoodPicker } from '../../components/FoodPicker';
 import { Bar, Button, Card, Screen, Segmented } from '../../components/ui';
 import { confirmAction } from '../../lib/confirm';
-import { getFood, itemTotals, newItemId, planItems, recommendedPlan } from '../../lib/foods';
+import { getFood, isAllowed, itemTotals, newItemId, planItems, recommendedPlan } from '../../lib/foods';
 import { useStore, useTodayLog } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import type { MealId, PlanItem } from '../../lib/types';
@@ -21,8 +22,15 @@ export default function DietScreen() {
   const [picker, setPicker] = useState<PickerTarget>(null);
   const goal = state.settings.proteinGoal;
 
-  const planTotals = itemTotals(planItems(state.plan));
-  const eaten = [...planItems(state.plan).filter((i) => log.eatenPlanItems.includes(i.id)), ...log.extraFoods];
+  // Plan items whose food the person has since removed from their diet are left out of totals and today's list.
+  const ok = (it: PlanItem) => {
+    const f = getFood(it.foodId);
+    return !!f && isAllowed(f, state.settings);
+  };
+  const allItems = planItems(state.plan);
+  const excludedCount = allItems.filter((it) => !ok(it)).length;
+  const planTotals = itemTotals(allItems.filter(ok));
+  const eaten = [...allItems.filter((i) => ok(i) && log.eatenPlanItems.includes(i.id)), ...log.extraFoods];
   const eatenTotals = itemTotals(eaten);
 
   const editMeal = (meal: MealId, fn: (items: PlanItem[]) => PlanItem[]) =>
@@ -35,9 +43,26 @@ export default function DietScreen() {
     }));
 
   const loadRecommended = () =>
-    confirmAction('Replace your plan?', 'This swaps your current meals for the recommended ~200 g protein day.', 'Replace', () =>
-      update((s) => ({ ...s, plan: recommendedPlan() })),
+    confirmAction(
+      'Replace your plan?',
+      'This swaps your current meals for a ~200 g protein day built from the foods you eat.',
+      'Replace',
+      () => update((s) => ({ ...s, plan: recommendedPlan(s.settings) })),
     );
+
+  const removeExcluded = () =>
+    update((s) => ({
+      ...s,
+      plan: {
+        meals: s.plan.meals.map((m) => ({
+          ...m,
+          items: m.items.filter((it) => {
+            const f = getFood(it.foodId);
+            return !!f && isAllowed(f, s.settings);
+          }),
+        })),
+      },
+    }));
 
   return (
     <Screen title="Diet" subtitle={`High protein · ${goal} g / day goal`}>
@@ -57,12 +82,11 @@ export default function DietScreen() {
           </Card>
 
           {state.plan.meals.map((meal) =>
-            meal.items.length === 0 ? null : (
+            meal.items.filter(ok).length === 0 ? null : (
               <Card key={meal.id} style={{ gap: 4 }}>
                 <Text style={styles.mealName}>{meal.name}</Text>
-                {meal.items.map((it) => {
-                  const f = getFood(it.foodId);
-                  if (!f) return null;
+                {meal.items.filter(ok).map((it) => {
+                  const f = getFood(it.foodId)!;
                   const done = log.eatenPlanItems.includes(it.id);
                   return (
                     <Pressable key={it.id} onPress={() => toggleEaten(it.id)} style={styles.foodRow}>
@@ -119,29 +143,37 @@ export default function DietScreen() {
             </Text>
           </Card>
 
-          <View style={styles.allergy}>
-            <Ionicons name="shield-checkmark" size={20} color={colors.warning} />
-            <Text style={styles.allergyText}>
-              Every food here is free of nuts, chickpeas and other legumes (beans, lentils, peas, soy, which can cross-react with a
-              chickpea allergy), and vegetables. Always check labels on protein powders, shakes and jerky for "may contain nuts".
-            </Text>
-          </View>
+          <Card style={{ gap: 10 }}>
+            <Text style={styles.mealName}>Remove from my diet</Text>
+            <DietRestrictions />
+            {excludedCount > 0 ? (
+              <View style={styles.allergy}>
+                <Ionicons name="alert-circle" size={20} color={colors.warning} />
+                <Text style={styles.allergyText}>
+                  {excludedCount} food{excludedCount > 1 ? 's' : ''} in your plan {excludedCount > 1 ? 'are' : 'is'} no longer in your diet.
+                </Text>
+                <Button small variant="secondary" label="Remove" onPress={removeExcluded} />
+              </View>
+            ) : null}
+            <Text style={styles.muted}>Have a food allergy? Always check labels for "may contain" warnings.</Text>
+          </Card>
 
           {state.plan.meals.map((meal) => (
             <Card key={meal.id} style={{ gap: 4 }}>
               <View style={styles.rowBetween}>
                 <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.muted}>{itemTotals(meal.items).protein} g</Text>
+                <Text style={styles.muted}>{itemTotals(meal.items.filter(ok)).protein} g</Text>
               </View>
               {meal.items.map((it) => {
                 const f = getFood(it.foodId);
                 if (!f) return null;
+                const allowed = ok(it);
                 return (
-                  <View key={it.id} style={styles.foodRow}>
+                  <View key={it.id} style={[styles.foodRow, !allowed && { opacity: 0.6 }]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.foodName}>{f.name}</Text>
-                      <Text style={styles.muted}>
-                        {fmt(it.servings)} × {f.serving} · {Math.round(f.protein * it.servings)} g
+                      <Text style={[styles.foodName, !allowed && { textDecorationLine: 'line-through' }]}>{f.name}</Text>
+                      <Text style={[styles.muted, !allowed && { color: colors.warning }]}>
+                        {allowed ? `${fmt(it.servings)} × ${f.serving} · ${Math.round(f.protein * it.servings)} g` : 'Removed from your diet'}
                       </Text>
                     </View>
                     <Stepper
@@ -159,7 +191,7 @@ export default function DietScreen() {
             </Card>
           ))}
 
-          <Button variant="secondary" icon="sparkles" label="Load recommended plan" onPress={loadRecommended} />
+          <Button variant="secondary" icon="sparkles" label="Build a recommended plan for me" onPress={loadRecommended} />
         </>
       )}
 
@@ -199,7 +231,7 @@ const styles = StyleSheet.create({
   foodRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   foodName: { color: colors.text, fontSize: 15, fontWeight: '600' },
   grams: { color: colors.success, fontWeight: '800', fontSize: 15 },
-  allergy: { flexDirection: 'row', gap: 10, padding: 12, borderRadius: radius.md, backgroundColor: 'rgba(255, 214, 10, 0.1)' },
+  allergy: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: radius.md, backgroundColor: 'rgba(255, 214, 10, 0.1)' },
   allergyText: { color: colors.text, flex: 1, fontSize: 13, lineHeight: 19 },
   stepper: { flexDirection: 'row', gap: 6 },
   stepBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.cardHigh, alignItems: 'center', justifyContent: 'center' },

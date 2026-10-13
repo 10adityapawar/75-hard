@@ -33,7 +33,7 @@ npm run build:web   # build to dist/ locally
 ## Code map
 
 - `src/lib/challenge.ts`: day scoring and the rollback rule
-- `src/lib/foods.ts`: food list (no nuts, chickpeas, legumes or vegetables) and the recommended plan
+- `src/lib/foods.ts`: food list with diet-restriction tags, and the recommended plan built around them
 - `src/lib/calendar.ts`: Google Calendar reminder links (web)
 - `src/lib/notifications.ts`: local notifications (Expo phone app)
 - `src/lib/photos.ts` / `photos.web.ts`: photo storage (file system / IndexedDB)

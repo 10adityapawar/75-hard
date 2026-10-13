@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { PENALTY_DAYS, TOTAL_DAYS } from '../lib/challenge';
 import { addDays } from '../lib/dates';
-import { proteinGoalFor } from '../lib/foods';
+import { proteinGoalFor, recommendedPlan } from '../lib/foods';
 import { ensurePermission } from '../lib/notifications';
 import { useStore } from '../lib/store';
 import { colors, radius } from '../lib/theme';
+import { DietRestrictions } from './DietRestrictions';
 import { Button, Card, Screen, SectionLabel } from './ui';
 
 const RULES = [
@@ -35,6 +36,7 @@ export function Onboarding() {
         bodyWeightLbs: w > 0 ? w : null,
         proteinGoal: w > 0 ? proteinGoalFor(w) : s.settings.proteinGoal,
       },
+      plan: recommendedPlan(s.settings), // starter plan built around their restrictions
     }));
     startChallenge(date);
     await ensurePermission();
@@ -75,6 +77,11 @@ export function Onboarding() {
         <Text style={styles.hint}>
           {Number(weight) > 0 ? `Daily target: ${proteinGoalFor(Number(weight))} g protein (1 g per lb).` : 'Sets your daily protein target at 1 g per lb.'}
         </Text>
+      </Card>
+
+      <SectionLabel>Foods you don't eat</SectionLabel>
+      <Card>
+        <DietRestrictions showHidden={false} />
       </Card>
 
       <Button label="Start today" icon="flame" onPress={() => start(today)} />

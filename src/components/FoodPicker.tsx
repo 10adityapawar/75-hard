@@ -2,7 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CATEGORIES, FOODS } from '../lib/foods';
+import { CATEGORIES, allowedFoods } from '../lib/foods';
+import { useStore } from '../lib/store';
 import { colors, radius } from '../lib/theme';
 import type { Food, FoodCategory } from '../lib/types';
 
@@ -11,13 +12,20 @@ type Props = { visible: boolean; title: string; onClose: () => void; onPick: (fo
 export function FoodPicker({ visible, title, onClose, onPick }: Props) {
   const [query, setQuery] = useState('');
   const [cat, setCat] = useState<FoodCategory | 'All'>('All');
+  const { state, update } = useStore();
+  const { excludedTags, hiddenFoods } = state.settings;
+  const allowed = useMemo(() => allowedFoods({ excludedTags, hiddenFoods }), [excludedTags, hiddenFoods]);
+  const categories = CATEGORIES.filter((c) => allowed.some((f) => f.category === c));
+
+  const hide = (food: Food) =>
+    update((s) => ({ ...s, settings: { ...s.settings, hiddenFoods: [...(s.settings.hiddenFoods ?? []), food.id] } }));
 
   const foods = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return FOODS.filter((f) => (cat === 'All' || f.category === cat) && (!q || f.name.toLowerCase().includes(q))).sort(
+    return allowed.filter((f) => (cat === 'All' || f.category === cat) && (!q || f.name.toLowerCase().includes(q))).sort(
       (a, b) => b.protein - a.protein,
     );
-  }, [query, cat]);
+  }, [query, cat, allowed]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -36,7 +44,7 @@ export function FoodPicker({ visible, title, onClose, onPick }: Props) {
           onChangeText={setQuery}
         />
         <View style={styles.chips}>
-          {(['All', ...CATEGORIES] as const).map((c) => (
+          {(['All', ...categories] as const).map((c) => (
             <Pressable key={c} onPress={() => setCat(c)} style={[styles.chip, cat === c && styles.chipActive]}>
               <Text style={[styles.chipText, cat === c && { color: '#fff' }]}>{c}</Text>
             </Pressable>
@@ -60,8 +68,13 @@ export function FoodPicker({ visible, title, onClose, onPick }: Props) {
                 <Text style={styles.proteinLbl}>protein</Text>
               </View>
               <Ionicons name="add-circle" size={28} color={colors.accent} />
+              <Pressable onPress={() => hide(item)} hitSlop={8} accessibilityLabel={`Remove ${item.name} from my diet`}>
+                <Ionicons name="eye-off-outline" size={20} color={colors.muted} />
+              </Pressable>
             </Pressable>
           )}
+          ListHeaderComponent={<Text style={styles.tip}>Tap + to add. Tap the eye to remove a food from your diet.</Text>}
+          ListEmptyComponent={<Text style={styles.tip}>No foods match. Check your diet restrictions.</Text>}
         />
       </SafeAreaView>
     </Modal>
@@ -70,6 +83,7 @@ export function FoodPicker({ visible, title, onClose, onPick }: Props) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
+  tip: { color: colors.muted, fontSize: 13 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 8 },
   title: { color: colors.text, fontSize: 22, fontWeight: '800' },
   search: { marginHorizontal: 16, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, padding: 12, fontSize: 16, borderWidth: 1, borderColor: colors.border },
