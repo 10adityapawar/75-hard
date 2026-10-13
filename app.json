@@ -1,25 +1,52 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "75 Hard",
+    "slug": "seventy-five-hard",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kinga.seventyfivehard"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0B0D",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.kinga.seventyfivehard"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "75 Hard",
+      "shortName": "75 Hard",
+      "themeColor": "#0B0B0D",
+      "backgroundColor": "#0B0B0D"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "75 Hard uses your photos so you can add daily progress pictures.",
+          "cameraPermission": "75 Hard uses the camera to take your daily progress photo.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-notifications",
+      "expo-font"
+    ],
+    "scheme": "seventyfivehard",
+    "backgroundColor": "#0B0B0D",
+    "experiments": {
+      "typedRoutes": true,
+      "baseUrl": "/75-hard"
     }
   }
 }
