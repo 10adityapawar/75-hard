@@ -40,7 +40,15 @@
         }
       ],
       "expo-notifications",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "75 Hard uses the camera to take progress photos and scan food barcodes.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "scheme": "seventyfivehard",
     "backgroundColor": "#0B0B0D",

@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { AppState as RNAppState } from 'react-native';
 import { emptyLog, settle, wakeDeadline } from './challenge';
 import { dateKey } from './dates';
-import { recommendedPlan } from './foods';
+import { recommendedPlan, registerCustomFoods } from './foods';
 import { rescheduleReminders } from './notifications';
 import { initPhotos } from './photos';
 import type { AppState, DayLog } from './types';
@@ -42,6 +42,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [today, setToday] = useState(dateKey());
   const [ready, setReady] = useState(false);
   const loaded = useRef(false);
+  // Runs during render so children always see the current scanned foods via getFood().
+  registerCustomFoods(state.customFoods);
 
   // Load saved state, then score any days that ended while the app was closed.
   useEffect(() => {

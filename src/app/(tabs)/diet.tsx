@@ -3,12 +3,13 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { DietRestrictions } from '../../components/DietRestrictions';
 import { FoodPicker } from '../../components/FoodPicker';
+import { ScanFood } from '../../components/ScanFood';
 import { Bar, Button, Card, Screen, Segmented } from '../../components/ui';
 import { confirmAction } from '../../lib/confirm';
 import { getFood, isAllowed, itemTotals, newItemId, planItems, recommendedPlan } from '../../lib/foods';
 import { useStore, useTodayLog } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
-import type { MealId, PlanItem } from '../../lib/types';
+import type { Food, MealId, PlanItem } from '../../lib/types';
 
 type Tab = 'today' | 'plan';
 type PickerTarget = { kind: 'meal'; meal: MealId; name: string } | { kind: 'extra' } | null;
@@ -20,6 +21,7 @@ export default function DietScreen() {
   const log = useTodayLog();
   const [tab, setTab] = useState<Tab>('today');
   const [picker, setPicker] = useState<PickerTarget>(null);
+  const [scan, setScan] = useState<PickerTarget>(null);
   const goal = state.settings.proteinGoal;
 
   // Plan items whose food the person has since removed from their diet are left out of totals and today's list.
@@ -35,6 +37,12 @@ export default function DietScreen() {
 
   const editMeal = (meal: MealId, fn: (items: PlanItem[]) => PlanItem[]) =>
     update((s) => ({ ...s, plan: { meals: s.plan.meals.map((m) => (m.id === meal ? { ...m, items: fn(m.items) } : m)) } }));
+
+  const addFood = (target: PickerTarget, food: Food, servings = 1) => {
+    const item: PlanItem = { id: newItemId(), foodId: food.id, servings };
+    if (target?.kind === 'meal') editMeal(target.meal, (items) => [...items, item]);
+    else updateToday((l) => ({ ...l, extraFoods: [...l.extraFoods, item] }));
+  };
 
   const toggleEaten = (id: string) =>
     updateToday((l) => ({
@@ -81,6 +89,8 @@ export default function DietScreen() {
             </Text>
           </Card>
 
+          <Button icon="barcode-outline" label="Scan a food barcode" onPress={() => setScan({ kind: 'extra' })} />
+
           {state.plan.meals.map((meal) =>
             meal.items.filter(ok).length === 0 ? null : (
               <Card key={meal.id} style={{ gap: 4 }}>
@@ -116,16 +126,21 @@ export default function DietScreen() {
                   <Ionicons name="checkmark-circle" size={24} color={colors.success} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.foodName}>{f.name}</Text>
-                    <Text style={styles.muted}>{f.serving}</Text>
+                    <Text style={styles.muted}>
+                      {it.servings === 1 ? f.serving : `${fmt(it.servings)} × ${f.serving}`} · {Math.round(f.calories * it.servings)} cal
+                    </Text>
                   </View>
-                  <Text style={styles.grams}>{f.protein} g</Text>
+                  <Text style={styles.grams}>{Math.round(f.protein * it.servings)} g</Text>
                   <Pressable hitSlop={10} onPress={() => updateToday((l) => ({ ...l, extraFoods: l.extraFoods.filter((x) => x.id !== it.id) }))}>
                     <Ionicons name="trash-outline" size={20} color={colors.muted} />
                   </Pressable>
                 </View>
               );
             })}
-            <Button small variant="ghost" icon="add" label="Add food" onPress={() => setPicker({ kind: 'extra' })} style={{ marginTop: 6 }} />
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+              <Button small variant="ghost" icon="add" label="Add food" onPress={() => setPicker({ kind: 'extra' })} style={{ flex: 1 }} />
+              <Button small variant="ghost" icon="barcode-outline" label="Scan" onPress={() => setScan({ kind: 'extra' })} style={{ flex: 1 }} />
+            </View>
           </Card>
         </>
       ) : (
@@ -200,12 +215,25 @@ export default function DietScreen() {
         title={picker?.kind === 'meal' ? `Add to ${picker.name}` : 'Log extra food'}
         onClose={() => setPicker(null)}
         onPick={(food) => {
-          const item: PlanItem = { id: newItemId(), foodId: food.id, servings: 1 };
-          if (picker?.kind === 'meal') editMeal(picker.meal, (items) => [...items, item]);
-          else updateToday((l) => ({ ...l, extraFoods: [...l.extraFoods, item] }));
+          addFood(picker, food);
+          setPicker(null);
+        }}
+        onScan={() => {
+          setScan(picker);
           setPicker(null);
         }}
       />
+
+      {scan ? (
+        <ScanFood
+          addLabel={scan.kind === 'meal' ? `Add to ${scan.name.toLowerCase()}` : 'Log it for today'}
+          onClose={() => setScan(null)}
+          onAdd={(food, servings) => {
+            addFood(scan, food, servings);
+            setScan(null);
+          }}
+        />
+      ) : null}
     </Screen>
   );
 }

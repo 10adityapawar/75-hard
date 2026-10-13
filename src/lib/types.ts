@@ -9,7 +9,8 @@ export type FoodCategory =
   | 'Nuts & Seeds'
   | 'Grains'
   | 'Vegetables'
-  | 'Fruit';
+  | 'Fruit'
+  | 'My Foods';
 
 export type FoodTag =
   | 'tree-nuts'
@@ -35,6 +36,14 @@ export type Food = {
   category: FoodCategory;
   tags: FoodTag[]; // used by diet restrictions
   note?: string;
+  // Extra detail for foods added by scanning a barcode.
+  brand?: string;
+  barcode?: string;
+  carbs?: number; // grams per serving
+  fat?: number;
+  sugar?: number;
+  fiber?: number;
+  sodium?: number; // mg per serving
 };
 
 export type PlanItem = { id: string; foodId: string; servings: number };
@@ -91,4 +100,5 @@ export type AppState = {
   progress: Progress;
   plan: DietPlan;
   logs: Record<string, DayLog>;
+  customFoods?: Food[]; // foods added by scanning a barcode
 };

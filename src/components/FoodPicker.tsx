@@ -7,9 +7,9 @@ import { useStore } from '../lib/store';
 import { colors, radius } from '../lib/theme';
 import type { Food, FoodCategory } from '../lib/types';
 
-type Props = { visible: boolean; title: string; onClose: () => void; onPick: (food: Food) => void };
+type Props = { visible: boolean; title: string; onClose: () => void; onPick: (food: Food) => void; onScan?: () => void };
 
-export function FoodPicker({ visible, title, onClose, onPick }: Props) {
+export function FoodPicker({ visible, title, onClose, onPick, onScan }: Props) {
   const [query, setQuery] = useState('');
   const [cat, setCat] = useState<FoodCategory | 'All'>('All');
   const { state, update } = useStore();
@@ -36,13 +36,20 @@ export function FoodPicker({ visible, title, onClose, onPick }: Props) {
             <Ionicons name="close-circle" size={30} color={colors.muted} />
           </Pressable>
         </View>
-        <TextInput
-          style={styles.search}
-          placeholder="Search foods"
-          placeholderTextColor={colors.muted}
-          value={query}
-          onChangeText={setQuery}
-        />
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.search}
+            placeholder="Search foods"
+            placeholderTextColor={colors.muted}
+            value={query}
+            onChangeText={setQuery}
+          />
+          {onScan ? (
+            <Pressable onPress={onScan} style={styles.scanBtn} accessibilityLabel="Scan a barcode">
+              <Ionicons name="barcode-outline" size={24} color={colors.text} />
+            </Pressable>
+          ) : null}
+        </View>
         <View style={styles.chips}>
           {(['All', ...categories] as const).map((c) => (
             <Pressable key={c} onPress={() => setCat(c)} style={[styles.chip, cat === c && styles.chipActive]}>
@@ -59,7 +66,9 @@ export function FoodPicker({ visible, title, onClose, onPick }: Props) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.foodName}>{item.name}</Text>
                 <Text style={styles.foodMeta}>
+                  {item.brand ? `${item.brand} · ` : ''}
                   {item.serving} · {item.calories} cal
+                  {item.carbs !== undefined ? ` · ${item.carbs}g carbs · ${item.fat ?? 0}g fat` : ''}
                 </Text>
                 {item.note ? <Text style={styles.note}>⚠️ {item.note}</Text> : null}
               </View>
@@ -86,7 +95,9 @@ const styles = StyleSheet.create({
   tip: { color: colors.muted, fontSize: 13 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 8 },
   title: { color: colors.text, fontSize: 22, fontWeight: '800' },
-  search: { marginHorizontal: 16, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, padding: 12, fontSize: 16, borderWidth: 1, borderColor: colors.border },
+  searchRow: { flexDirection: 'row', gap: 8, marginHorizontal: 16 },
+  scanBtn: { width: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent, borderRadius: radius.md },
+  search: { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, padding: 12, fontSize: 16, borderWidth: 1, borderColor: colors.border },
   chips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingTop: 12, gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },

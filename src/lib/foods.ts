@@ -99,11 +99,20 @@ export const FOODS: Food[] = [
 ];
 
 export const CATEGORIES: FoodCategory[] = [
-  'Meat & Poultry', 'Seafood', 'Eggs & Dairy', 'Plant Protein', 'Shakes & Snacks', 'Nuts & Seeds', 'Grains', 'Vegetables', 'Fruit',
+  'My Foods', 'Meat & Poultry', 'Seafood', 'Eggs & Dairy', 'Plant Protein', 'Shakes & Snacks', 'Nuts & Seeds', 'Grains', 'Vegetables', 'Fruit',
 ];
 
 const byId = new Map(FOODS.map((f) => [f.id, f]));
+let custom: Food[] = [];
 export const getFood = (id: string) => byId.get(id);
+
+/** Makes scanned foods visible to getFood()/allowedFoods(). Called by the store whenever its state changes. */
+export function registerCustomFoods(foods: Food[] = []) {
+  if (foods === custom) return;
+  for (const f of custom) byId.delete(f.id);
+  for (const f of foods) byId.set(f.id, f);
+  custom = foods;
+}
 
 type DietPrefs = Pick<Settings, 'excludedTags' | 'hiddenFoods'>;
 
@@ -115,7 +124,7 @@ export function isAllowed(food: Food, prefs: DietPrefs): boolean {
 }
 
 export function allowedFoods(prefs: DietPrefs): Food[] {
-  return FOODS.filter((f) => isAllowed(f, prefs));
+  return [...custom, ...FOODS].filter((f) => isAllowed(f, prefs));
 }
 
 export function newItemId(): string {
