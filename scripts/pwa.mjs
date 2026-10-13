@@ -18,7 +18,11 @@ const head = `
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="75 Hard" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <style>html, body { background: #0B0B0D; }</style>
+    <style>
+      html, body { background: #0B0B0D; }
+      /* iOS home-screen apps measure 100% as screen minus status bar, leaving a blank strip at the bottom. */
+      html, body, #root { height: 100vh; height: 100dvh; }
+    </style>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('${base}/sw.js', { scope: '${base}/' }));
