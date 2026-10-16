@@ -1,14 +1,18 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FixDay } from '../../components/FixDay';
 import { Bar, Card, Screen, SectionLabel } from '../../components/ui';
 import { PENALTY_DAYS, TOTAL_DAYS, currentDay } from '../../lib/challenge';
 import { formatDate } from '../../lib/dates';
 import { useStore } from '../../lib/store';
-import { colors, radius } from '../../lib/theme';
+import { colors } from '../../lib/theme';
+import type { HistoryEntry } from '../../lib/types';
 
 export default function ProgressScreen() {
   const { state } = useStore();
   const { progress } = state;
+  const [fixing, setFixing] = useState<HistoryEntry | null>(null);
   const day = progress.finishedOn ? TOTAL_DAYS : currentDay(progress);
   const misses = progress.history.filter((h) => h.result === 'missed').length;
   const daysLeft = TOTAL_DAYS - progress.completed;
@@ -66,7 +70,12 @@ export default function ProgressScreen() {
       ) : (
         <Card style={{ paddingVertical: 4 }}>
           {[...progress.history].reverse().map((h, i) => (
-            <View key={h.date} style={[styles.histRow, i > 0 && styles.histBorder]}>
+            <Pressable
+              key={h.date}
+              onPress={h.result === 'missed' ? () => setFixing(h) : undefined}
+              disabled={h.result !== 'missed'}
+              style={[styles.histRow, i > 0 && styles.histBorder]}
+            >
               <Ionicons
                 name={h.result === 'done' ? 'checkmark-circle' : 'close-circle'}
                 size={22}
@@ -78,10 +87,16 @@ export default function ProgressScreen() {
                 </Text>
                 <Text style={styles.muted}>{formatDate(h.date, { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
               </View>
-            </View>
+              {h.result === 'missed' ? <Text style={styles.fix}>Fix</Text> : null}
+            </Pressable>
           ))}
         </Card>
       )}
+      {progress.history.some((h) => h.result === 'missed') ? (
+        <Text style={styles.muted}>Forgot to log something on a missed day? Tap it to fix it.</Text>
+      ) : null}
+
+      {fixing ? <FixDay date={fixing.date} dayNumber={fixing.dayNumber} onClose={() => setFixing(null)} /> : null}
     </Screen>
   );
 }
@@ -114,5 +129,6 @@ const styles = StyleSheet.create({
   cellText: { color: colors.muted, fontSize: 11, fontWeight: '700' },
   histRow: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 12 },
   histBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  fix: { color: colors.accent, fontSize: 15, fontWeight: '700' },
   histTitle: { color: colors.text, fontSize: 15, fontWeight: '600' },
 });

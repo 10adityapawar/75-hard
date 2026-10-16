@@ -114,3 +114,11 @@ export function dayNumberFor(state: AppState, date: string, today: string): numb
   }
   return null;
 }
+
+/** Re-scores every past day from the start date. Used after a past day's log is corrected. */
+export function rescore(state: AppState, today: string): AppState {
+  const p = state.progress;
+  if (!p.startDate) return state;
+  const fresh: Progress = { ...p, completed: 0, streak: 0, bestStreak: 0, lastSettled: null, finishedOn: null, history: [] };
+  return settle({ ...state, progress: fresh }, today);
+}
